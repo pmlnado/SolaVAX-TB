@@ -1,0 +1,282 @@
+---
+title: "Plotting only"
+author: "Pablo Maldonado"
+date: "10/18/2023"
+output:
+  html_document: default
+  word_document: default
+---
+
+```{r global options}
+knitr::opts_chunk$set(echo = TRUE, error = FALSE, message = FALSE, warning = FALSE)
+
+```
+
+## Loading packages
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(jtools)
+library(readxl)
+library(ggplot2)
+library(RColorBrewer)
+library(dplyr)
+library(tidyverse)
+library(scales)
+library(stringr)
+library(tidyr)
+library(knitr)
+library(forcats)
+library(broom)
+library(ggfortify)
+library(stats)
+library(ggpubr)
+library(grDevices)
+library(rstatix)
+library(writexl)
+library(purrr)
+library(kableExtra)
+library(ggbeeswarm)
+library(multcomp)
+library(DescTools)
+library(car)
+library(exactRankTests)
+library(readr)
+library(ggeffects)
+library(GGally)
+library(gridExtra)
+library(emmeans)
+#mm7qNhXs8FN4CFS
+```
+
+MULTI CSV SHEETS MALE FEMALE
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+# Read in all CSV files
+files <- list.files(path = "/Volumes/cvmbs/RSTOR-HenaO_lab/SolaVAX-TB/SvX_R_analysis/NO_AF_D30_All_Groups", pattern = "*.csv", full.names = TRUE)
+
+dfs <- lapply(files, function(file) {
+  # Read the CSV file and clean up column names
+  df <- read_csv(file)
+    df <- df %>%
+    rename("Sample" = colnames(.)[1]) %>%
+    dplyr::select(Sample, contains("Count")) %>%
+    rename_all(funs(str_replace(., "\\|.+", ""))) %>%
+    rename_all(~ str_remove(., "Leukocytes/Single Cells/")) %>%
+    rename_all(~ str_remove(., "Leukocytes/")) %>%
+    rename_all(~ str_remove(., "LIVE/")) %>%
+    # mutate(Sample = str_replace_all(Sample, "\\b[A-Za-z][0-9]+\\b", "")) %>%
+    rename_all(funs(str_replace_all(., ",", ""))) %>%
+    rename_all(funs(str_replace_all(., "/", " "))) %>%
+    rename_all(funs(str_replace_all(., "\\\\", " ")))  %>%
+    rename_all(~ stringr::str_replace_all(., "Q\\d+\\:", "")) %>%
+    rename("cells in sample" := matches("Count")) %>%
+    rename("leukocytes" := matches("leukocytes")) %>%
+    rename("live leukocytes" := matches("LIVE")) %>%
+    rename("single cells" := matches("Single Cells")) %>%
+  # Removing logical vectors, not sure why its adding these
+  dplyr::select(where(~ !any(is.logical(.)) | is.numeric(.))) %>%
+  # Remove last two rows of SD and Mean
+  slice(1:(n() - 2))
+  # Extract the sex from the file name
+  sex <- ifelse(grepl("female", file), "female", "male")
+  df <- df %>% mutate(sex = sex)
+  # Move the sex column to the second position
+  df <- df %>% relocate(sex, .after = 1)
+  # Extract the day from the file name
+  day <- str_extract(file, "(?<=Day\\s)\\d+")
+  df <- df %>% mutate(day = as.character(day))
+  # Move the day column to the third position
+  df <- df %>% relocate(day, .after = 2)
+  
+  return(df)
+})
+
+# Combine all data frames into one dataframe
+Df1 <- bind_rows(dfs)
+Df1
+
+#str(dfs)
+#tail(Df1)
+
+# Check for NA values in Df1
+#na_counts <- colSums(is.na(Df1))
+
+# Print the column names with NA counts
+#print(na_counts)
+Df1
+```
+
+```{r}
+Df1 <- Df1 %>%
+  mutate(Sample = gsub("^[A-Za-z]\\d{1,2}\\s", "", Sample)) %>%
+  separate(col = "Sample", into = c("group", "mouse_ID"), sep = " ") %>%
+  mutate(mouse_ID = str_replace(mouse_ID, ".fcs", ""))
+
+Df1$group <- str_replace_all(Df1$group, "-", " ")
+
+# Change Names 
+Df1 <- Df1 %>%
+  mutate(group = case_when(
+    group == "IN Inulin" ~ "SvX IN + Inulin",
+    group == "IM CPG" ~ "SvX IM + CpG",
+    group == "SvX IN" ~ "SvX IN no adj",
+    group == "SvX IM" ~ "SvX IM no adj",
+    TRUE ~ group  # Keep other values as they are
+  ))
+
+# call all group names
+Df1 %>%
+  dplyr::select(group) %>%
+  distinct()
+```
+
+# CD4+
+```{r, fig.width = 24, fig.height= 36}
+
+cd4 <- pivot_longer(data = Df1, cols = "CD3+ ":"CD3+ CD4+  CD44-  CD62L- ", names_to = "cell_types", values_to = "cell_type_count")
+
+ cd4 <- cd4 %>%
+  dplyr::select("group", "mouse_ID", "cell_types", "live leukocytes", "cell_type_count")
+ 
+cd4 <- cd4 %>%
+  mutate(proportion_of_live = (cell_type_count/`live leukocytes`*100)) 
+
+
+cd4 <- cd4 %>%
+  mutate(group = fct_relevel(group, "Saline", "Inulin", "CPG", "SvX IN no adj", "SvX IM no adj", "BCG", "BCG BCG", "SvX IN + Inulin", "SvX IM + CpG"),
+         cell_types = factor(cell_types, levels = levels(reorder(cell_types, -proportion_of_live))))
+
+
+ cd4 %>%
+  ggplot(aes(x = group, y = proportion_of_live, fill = group, color = group)) +
+facet_wrap(~ cell_types, scale = "free_y", ncol = 4, nrow = 20) +
+  geom_boxplot(width = 0.5, alpha = 0.5, position = position_dodge(width = 0.75)) +
+  geom_point(size = 3, shape = 21, alpha = 0.8, na.rm = TRUE, color = "black",
+             position = position_dodge(width = 0.75)) +
+  labs(title = "CD4+ Tcells in Lung Day 30", 
+       x = "Group", y = "Proportion of Live", 
+       color = "Vaccine") +
+  guides(fill = "none", shape = guide_legend(title = "Vaccine")) +
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 14),  # Increase axis label size
+        strip.text = element_text(size = 15, face = "bold"),  # Increase facet label size
+        plot.title = element_text(size = 20, face = "bold"),
+        axis.title.x = element_text(size = 16),  # Increase x-axis title size
+        axis.title.y = element_text(size = 16),  # Increase y-axis title size
+        axis.text.y = element_text(size = 14),   # Increase y-axis numbers size
+        legend.text = element_text(size = 14),
+        legend.title = element_text(size = 14)) 
+```
+
+# CD8+
+```{r, fig.width = 24, fig.height= 36}
+
+cd8 <- pivot_longer(data = Df1, cols = "CD3+ CD8+ ":"CD3+ CD8+  CD44-  CD62L- ", names_to = "cell_types", values_to = "cell_type_count")
+
+ cd8 <- cd8 %>%
+  dplyr::select("group", "mouse_ID", "cell_types", "live leukocytes", "cell_type_count")
+ 
+cd8 <- cd8 %>%
+  mutate(proportion_of_live = (cell_type_count/`live leukocytes`*100)) 
+
+
+cd8 <- cd8 %>%
+  mutate(group = fct_relevel(group, "Saline", "Inulin", "CPG", "SvX IN no adj", "SvX IM no adj", "BCG", "BCG BCG", "SvX IN + Inulin", "SvX IM + CpG"),
+         cell_types = factor(cell_types, levels = levels(reorder(cell_types, -proportion_of_live))))
+
+
+ cd8 %>%
+  ggplot(aes(x = group, y = proportion_of_live, fill = group, color = group)) +
+facet_wrap(~ cell_types, scale = "free_y", ncol = 4, nrow = 20) +
+  geom_boxplot(width = 0.5, alpha = 0.5, position = position_dodge(width = 0.75)) +
+  geom_point(size = 3, shape = 21, alpha = 0.8, na.rm = TRUE, color = "black",
+             position = position_dodge(width = 0.75)) +
+  labs(title = "CD4+ Tcells in Lung Day 30", 
+       x = "Group", y = "Proportion of Live", 
+       color = "Vaccine") +
+  guides(fill = "none", shape = guide_legend(title = "Vaccine")) +
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 14),  # Increase axis label size
+        strip.text = element_text(size = 15, face = "bold"),  # Increase facet label size
+        plot.title = element_text(size = 20, face = "bold"),
+        axis.title.x = element_text(size = 16),  # Increase x-axis title size
+        axis.title.y = element_text(size = 16),  # Increase y-axis title size
+        axis.text.y = element_text(size = 14),   # Increase y-axis numbers size
+        legend.text = element_text(size = 14),
+        legend.title = element_text(size = 14)) 
+```
+
+# NK cells
+```{r, fig.width = 24, fig.height= 20}
+
+NK <- pivot_longer(data = Df1, cols = "CD3- NK1.1+ ":"CD3- NK1.1+  CD44-  CD62L- ", names_to = "cell_types", values_to = "cell_type_count")
+
+ NK <- NK %>%
+  dplyr::select("group", "mouse_ID", "cell_types", "live leukocytes", "cell_type_count")
+ 
+NK <- NK %>%
+  mutate(proportion_of_live = (cell_type_count/`live leukocytes`*100)) 
+
+
+NK <- NK %>%
+  mutate(group = fct_relevel(group, "Saline", "Inulin", "CPG", "SvX IN no adj", "SvX IM no adj", "BCG", "BCG BCG", "SvX IN + Inulin", "SvX IM + CpG"),
+         cell_types = factor(cell_types, levels = levels(reorder(cell_types, -proportion_of_live))))
+
+
+ NK %>%
+  ggplot(aes(x = group, y = proportion_of_live, fill = group, color = group)) +
+facet_wrap(~ cell_types, scale = "free_y", ncol = 3, nrow = 20) +
+  geom_boxplot(width = 0.5, alpha = 0.5, position = position_dodge(width = 0.75)) +
+  geom_point(size = 3, shape = 21, alpha = 0.8, na.rm = TRUE, color = "black",
+             position = position_dodge(width = 0.75)) +
+  labs(title = "CD4+ Tcells in Lung Day 30", 
+       x = "Group", y = "Proportion of Live", 
+       color = "Vaccine") +
+  guides(fill = "none", shape = guide_legend(title = "Vaccine")) +
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 14),  # Increase axis label size
+        strip.text = element_text(size = 15, face = "bold"),  # Increase facet label size
+        plot.title = element_text(size = 20, face = "bold"),
+        axis.title.x = element_text(size = 16),  # Increase x-axis title size
+        axis.title.y = element_text(size = 16),  # Increase y-axis title size
+        axis.text.y = element_text(size = 14),   # Increase y-axis numbers size
+        legend.text = element_text(size = 14),
+        legend.title = element_text(size = 14)) 
+```
+
+# B cells
+```{r, fig.width = 24, fig.height= 36}
+
+Bcells <- pivot_longer(data = Df1, cols = "CD3-  CD19-  B220+ ":"CD3-  CD19-  B220- ", names_to = "cell_types", values_to = "cell_type_count")
+
+Bcells <- Bcells %>%
+  dplyr::select("group", "mouse_ID", "cell_types", "live leukocytes", "cell_type_count")
+ 
+Bcells <- Bcells %>%
+  mutate(proportion_of_live = (cell_type_count/`live leukocytes`*100)) 
+
+
+Bcells <- Bcells %>%
+  mutate(group = fct_relevel(group, "Saline", "Inulin", "CPG", "SvX IN no adj", "SvX IM no adj", "BCG", "BCG BCG", "SvX IN + Inulin", "SvX IM + CpG"),
+         cell_types = factor(cell_types, levels = levels(reorder(cell_types, -proportion_of_live))))
+
+
+Bcells %>% 
+  ggplot(aes(x = group, y = proportion_of_live, fill = group, color = group)) +
+facet_wrap(~ cell_types, scale = "free_y", ncol = 4, nrow = 20) +
+  geom_boxplot(width = 0.5, alpha = 0.5, position = position_dodge(width = 0.75)) +
+  geom_point(size = 3, shape = 21, alpha = 0.8, na.rm = TRUE, color = "black",
+             position = position_dodge(width = 0.75)) +
+  labs(title = "CD4+ Tcells in Lung Day 30", 
+       x = "Group", y = "Proportion of Live", 
+       color = "Vaccine") +
+  guides(fill = "none", shape = guide_legend(title = "Vaccine")) +
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 14),  # Increase axis label size
+        strip.text = element_text(size = 15, face = "bold"),  # Increase facet label size
+        plot.title = element_text(size = 20, face = "bold"),
+        axis.title.x = element_text(size = 16),  # Increase x-axis title size
+        axis.title.y = element_text(size = 16),  # Increase y-axis title size
+        axis.text.y = element_text(size = 14),   # Increase y-axis numbers size
+        legend.text = element_text(size = 14),
+        legend.title = element_text(size = 14)) 
+```

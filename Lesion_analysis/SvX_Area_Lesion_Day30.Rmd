@@ -1,0 +1,67 @@
+---
+title: "SvX Day30 Lesion Area"
+author: "Pablo Maldonado"
+date: "11/2/2023"
+output: html_document
+---
+
+
+```{r global options, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = FALSE, error = FALSE, message = FALSE, warning = FALSE)
+```
+
+```{r}
+library(readxl)
+library(dplyr)
+library(purrr)
+library(tidyr)
+library(stringr)
+library(tidyverse)
+library(gridExtra)
+library(ggplot2)
+library(ggpubr)
+library(scales)
+```
+
+```{r fig.height=5}
+
+SvXDay30_lesion_area <- data.frame(
+  group = c("BCG + SolaVAX IM", "BCG + SolaVAX IM", "BCG + SolaVAX IM", "BCG + SolaVAX IM", "BCG + SolaVAX IM",
+            "Saline", "Saline", "Saline", "Saline", "Saline",
+            "BCG", "BCG", "BCG", "BCG", "BCG",
+            "BCG + BCG", "BCG + BCG", "BCG + BCG", "BCG + BCG", "BCG + BCG"),
+  mouse = c(1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5),
+  day = c(30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30),
+  cell_area = c(45352254.4, 22656752.9, 35090373.9, 38939443.6, 22165189.2,
+                29991985, 29819514.1, 28757676.3, 35928554.4, 39292911,
+                34514901.5, 32078832.3, 31947483.4, 40465975.3, 42050989.3,
+                32910436.4, 34520811.5, 30737497.9, 29480214.1, 37696049.3),
+  lesion_area = c(707253.8, 91434.4, 822909.2, 629141, 319717.5,
+                  466860.2, 9978455.2, 604920, 1227400.2, 771439.5,
+                  825936.8, 203456.6, 65396.8, 1739069.3, 610975.3,
+                  868929.1, 508641.4, 1077229.9, 851974.4, 566771.9)
+)
+
+SvXDay30_lesion_area <- SvXDay30_lesion_area %>%
+  mutate(percent_lesion = (lesion_area/cell_area)*100)
+
+
+SvXDay30_lesion_area$group <- factor(SvXDay30_lesion_area$group, levels = c("Saline", "BCG", "BCG + BCG", "BCG + SolaVAX IM"))
+
+SvXDay30_lesion_area <- SvXDay30_lesion_area %>%
+  filter(lesion_area != 9978455.2)
+
+
+SvXDay30_lesion_area %>%
+  ggplot(aes(x = group, y = percent_lesion, fill = group, color = group)) +
+  geom_point(size = 5, shape = 21, alpha = 0.8, na.rm = T, colour = "black", cex = 1.5, position = position_dodge(width = .75)) + 
+  geom_boxplot(aes(fill = group), alpha = 0.3) + 
+  theme_bw() + 
+  theme(axis.text.x = element_text(size = 14, face = "bold", angle = 45,  hjust = 1), axis.text.y = element_text(size = 24), 
+        axis.title.x = element_blank(), axis.title.y = element_text(size = 14, face = "bold"), legend.position = "none", 
+        plot.title = element_blank()) + theme(strip.text = element_text(size=14, face = "bold")) +
+labs(title = paste0("SolaVAX Day 30 Lung Lesion"), x = "Group", y = "Percent Lesion Area", color = "Group") 
+
+
+```
+
