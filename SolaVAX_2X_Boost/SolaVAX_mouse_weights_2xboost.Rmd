@@ -1,0 +1,59 @@
+---
+title: "Mouse weights SolaVAX"
+author: "Pablo Maldonado"
+date: "1/11/2024"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r}
+# Load required libraries
+library(readxl)
+library(ggplot2)
+library(tidyr)
+
+```
+
+```{r fig.width=5}
+# Specify the path to your Excel file
+excel_file_path <- "/Users/PabloM/Documents/HenaoLabDocuments/ExcelDocs/Solavax-tb mouse weight.xlsx"
+
+# Read the Excel file
+weight_data <- read_excel(excel_file_path)
+
+
+
+weight_data <- pivot_longer(weight_data, cols = starts_with("Week"), names_to = "Week", values_to = "Weight (g)")
+weight_data$Vaccine <- factor(weight_data$Vaccine, levels = c("Saline", "BCG 1x", "BCG 2x", "BCG + SolaVAX-IN-AdVAX 2x", "BCG + SolaVAX-IN-Laporte 2x", "BCG + SolaVAX-IM-CpG 2x", "BCG + SolaVAX-IM-CpG + SolaVAX-IN-AdVAX", "BCG + SolaVAX-IM-CpG + SolaVAX-IN-Laporte"))
+
+
+ggplot(weight_data, aes(x = Week, y = `Weight (g)`, fill = Vaccine, color = Vaccine)) +
+geom_point(size = 2, shape = 21, alpha = 0.8, na.rm = T, colour = "black", 
+           cex = 1.5, position = position_dodge(width = .75)) + 
+  geom_boxplot(aes(fill = Vaccine), alpha = 0.3) + 
+  theme_bw() + 
+  theme(
+        axis.text.x = element_text(size = 14), 
+        axis.text.y = element_text(size = 14),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 14, face = "bold"),
+        legend.text = element_text(size = 8), 
+        legend.title = element_text(size = 8), 
+        legend.key.size = unit(1, 'cm'), 
+        plot.title = element_text(color="black", size=14, face="bold")) + 
+  theme(strip.text = element_text(size=16, face = "bold")) +
+labs (y="Weight (g)") +
+  ggtitle("SolaVAX Boost 2x Weights") +
+  ylim(18, 33)
+```
+
+
