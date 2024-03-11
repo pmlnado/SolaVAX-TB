@@ -20,40 +20,122 @@ You can also embed plots, for example:
 library(readxl)
 library(ggplot2)
 library(tidyr)
+library(dplyr)
+library(stringr)
+library(gtools)
 
 ```
 
-```{r fig.width=5}
+```{r fig.width=8, fig.height=5}
 # Specify the path to your Excel file
-excel_file_path <- "/Users/PabloM/Documents/HenaoLabDocuments/ExcelDocs/Solavax-tb mouse weight.xlsx"
+excel_file_path <- "/Volumes/rstor-henao_lab/SolaVAX-TB/SolaVAX_2X_Boost/Solavax-tb mouse weight.xlsx"
 
 # Read the Excel file
 weight_data <- read_excel(excel_file_path)
 
-
-
 weight_data <- pivot_longer(weight_data, cols = starts_with("Week"), names_to = "Week", values_to = "Weight (g)")
+
+#weight_data <- mutate_all(weight_data, as.character)
+weight_data$`Weight (g)` <- as.numeric(weight_data$`Weight (g)`)
+
+# Extract numeric part of the week column
+weight_data$Week <- as.numeric(sub("Week ", "", weight_data$Week))
+
+# average_weight <- weight_data %>%
+#   group_by(Endpoint, Week, Vaccine) %>%
+#   summarise(Avg_Weight = mean(`Weight (g)`, na.rm = TRUE))
+
 weight_data$Vaccine <- factor(weight_data$Vaccine, levels = c("Saline", "BCG 1x", "BCG 2x", "BCG + SolaVAX-IN-AdVAX 2x", "BCG + SolaVAX-IN-Laporte 2x", "BCG + SolaVAX-IM-CpG 2x", "BCG + SolaVAX-IM-CpG + SolaVAX-IN-AdVAX", "BCG + SolaVAX-IM-CpG + SolaVAX-IN-Laporte"))
 
 
-ggplot(weight_data, aes(x = Week, y = `Weight (g)`, fill = Vaccine, color = Vaccine)) +
-geom_point(size = 2, shape = 21, alpha = 0.8, na.rm = T, colour = "black", 
-           cex = 1.5, position = position_dodge(width = .75)) + 
-  geom_boxplot(aes(fill = Vaccine), alpha = 0.3) + 
-  theme_bw() + 
-  theme(
-        axis.text.x = element_text(size = 14), 
-        axis.text.y = element_text(size = 14),
-        axis.title.x = element_blank(),
-        axis.title.y = element_text(size = 14, face = "bold"),
-        legend.text = element_text(size = 8), 
-        legend.title = element_text(size = 8), 
-        legend.key.size = unit(1, 'cm'), 
-        plot.title = element_text(color="black", size=14, face="bold")) + 
-  theme(strip.text = element_text(size=16, face = "bold")) +
-labs (y="Weight (g)") +
-  ggtitle("SolaVAX Boost 2x Weights") +
-  ylim(18, 33)
+# Make a new background dataframe to incorporate all the datapoints
+weight_data$Week <- as.factor(weight_data$Week)
+weight_data_VAC <- weight_data %>% select(-Vaccine) 
+average_weight <- weight_data %>%
+  filter(!is.na(`Weight (g)`)) %>%
+  group_by(Endpoint, Vaccine, Week) %>%
+  summarise(Avg_Weight = mean(`Weight (g)`))
+# Calculate the difference in mouse counts between consecutive weeks
+weight_data1 <- weight_data %>%
+  filter(!is.na(`Weight (g)`)) %>%
+  group_by(Endpoint, Vaccine, Week) %>%
+summarise(total_mice = sum(Mouse/3))
+# Find the weeks where the mouse counts dropped
+drop_weeks <- weight_data1 %>%
+  filter(total_mice < 5) %>%
+  slice(which.min(Week)) 
+
+# Use the unfiltered dataset to see trajectroies for groups at all timepoints.
+
+p <- ggplot(data = na.omit(weight_data), aes(x = Week, y = `Weight (g)`, color = Vaccine)) +
+  geom_point(size = 2, shape = 21, alpha = 0.8, na.rm = TRUE, position = position_dodge(width = 1)) +
+  geom_boxplot(aes(fill = Vaccine), alpha = 0.3, position = position_dodge(width = 1)) + 
+  geom_point(data = na.omit(weight_data_VAC), color = "grey", alpha = .2) + 
+  geom_boxplot(data = na.omit(weight_data_VAC), color = "grey", alpha = .2) +
+  facet_wrap(~Vaccine + Endpoint, scales = "free") +
+  facet_wrap(~Vaccine + Endpoint, scales = "free") +
+  labs(title = "SolaVAX Boost 2x Mouse Weights", x = 'Week', y = 'Weight (g)') +
+  theme_bw() +
+    theme(
+    strip.text = element_text(color = "black", size = .7 * rel(1)),
+    axis.text.x = element_text(angle = 45, hjust = 1, color = "black", size = .7 * rel(1)),
+    axis.title.x = element_text(color = "black", size = .7 * rel(1)),
+    axis.text.y = element_text(color = "black", size = .7 * rel(1)),
+    axis.title.y = element_text(color = "black", size = .7 * rel(1)),
+    legend.position = "none",
+    legend.title = element_text(color = "black", size = .7 * rel(1)),
+    legend.text = element_text(color = "black", size = .7 * rel(1)),
+    plot.title = element_text(color = "black", size = 10))
+
+p <- p + geom_text(data = average_weight, aes(x = Week, y = Avg_Weight, label = round(Avg_Weight, 1)),
+              vjust = -0.5, color = "black", size = 2.5, position = position_dodge(width = 1)) 
+p
+
+# Plot with geom_text
+p + geom_text(data = drop_weeks, aes(label = "Drop", x = as.numeric(Week), y = total_mice), 
+              color = "red", size = 2, vjust = -0.5, show.legend = FALSE)
+
+
+
+p + geom_text(data = drop_weeks, aes(label = "FDIC = 1", x = as.numeric(Week), y = total_mice + 25), 
+              color = "red", size = 2, vjust = -0.5, show.legend = FALSE)
+
 ```
+
+```{r}
+
+
+
+
+
+# ggplot(data = na.omit(weight_data), aes(x = Week, y = `Weight (g)`, fill = Vaccine, color = Vaccine)) +
+#   geom_point(size = 2, shape = 21, alpha = 0.8, na.rm = TRUE, position = position_dodge(width = 1)) +
+#   geom_boxplot(aes(fill = Vaccine), alpha = 0.3, position = position_dodge(width = 1)) + 
+#   facet_wrap(~Endpoint, scales = "free_x") +  
+#   theme_bw() + 
+#   theme(
+#         axis.text.x = element_text(size = 14, angle = 45, hjust = 1), 
+#         axis.text.y = element_text(size = 14),
+#         axis.title.x = element_blank(),
+#         axis.title.y = element_text(size = 14, face = "bold"),
+#         legend.text = element_text(size = 8), 
+#         legend.title = element_text(size = 8), 
+#         legend.key.size = unit(1, 'cm'), 
+#         plot.title = element_text(color="black", size=14, face="bold")) + 
+#   theme(strip.text = element_text(size=16, face = "bold")) +
+# labs (y="Weight (g)") +
+#   ggtitle("SolaVAX Boost 2x Weights") +
+#   ylim(18, 35)
+
+# ggplot(data = na.omit(weight_data), aes(x = Week, y = `Weight (g)`, color = Vaccine)) +
+#   geom_point(size = 2, shape = 21, alpha = 0.8, na.rm = TRUE, position = position_dodge(width = 1)) +
+#   geom_boxplot(aes(fill = Vaccine), alpha = 0.3, position = position_dodge(width = 1)) + 
+#   facet_wrap(~Vaccine + Endpoint, scales = "free_x") +
+#   labs(x = 'Week', y = 'Weight (g)') +
+#   theme_bw() +
+#   theme(legend.position="none") 
+
+```
+
 
 
