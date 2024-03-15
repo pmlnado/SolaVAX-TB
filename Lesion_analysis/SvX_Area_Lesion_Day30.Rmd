@@ -26,6 +26,7 @@ library(emmeans)
 library(viridis)
 library(vcd)
 library(ggmosaic)
+library(kableExtra)
 ```
 
 ```{r}
@@ -65,10 +66,149 @@ percent_area
 
 # # Recode the condition and group names
 percent_area  <- percent_area  %>%
-  mutate(name = ifelse(name == "IMCPG", "BCG+SvX-IM-CPG",
+  mutate(name = ifelse(name == "IMCPG", "BCG+SvX-IM-CpG",
                        ifelse(name == "INInulin", "BCG+SvX-IN-Inulin", name)))
-percent_area$name <- factor(percent_area$name, levels = c("Saline", "BCG1x", "BCG2x", "BCG+SvX-IM-CPG", "BCG+SvX-IN-Inulin"))
+percent_area$name <- factor(percent_area$name, levels = c("Saline", "BCG1x", "BCG2x", "BCG+SvX-IN-Inulin", "BCG+SvX-IM-CpG"))
 ```
+
+this works for one timepoint or sex at a time 
+
+```{r}
+# # ANOVA
+# anova_result <- aov(average_percent_burden ~ name, data = percent_area)
+# 
+# # Extract p-values from ANOVA
+# p_values <- summary(anova_result)[["Pr(>F)"]]
+# 
+# # Perform Tukey's post hoc test for group comparisons
+# tukey_result <- TukeyHSD(anova_result)
+# 
+# # Extract p-values from Tukey's test
+# p_values <- tukey_result[[1]][, "p adj"]
+# 
+# p_values
+# # Specify the pairs of groups for significance bars
+# significant_comparisons <- p_values < 0.05  # Example: using a significance level of 0.05
+# significant_comparisons
+# 
+# # Create a data frame
+# comparison_df <- data.frame(
+#   p_value = p_values,
+#   significant = significant_comparisons)
+# comparison_df <- comparison_df %>% rownames_to_column("vaccine")
+# 
+# comparison_df
+# 
+# 
+# # Create a function to add asterisks based on p-values
+# add_asterisks <- function(p_value) {
+#   if (p_value < 0.00009) {
+#     return("****")
+#   } else if (p_value < 0.0009) {
+#     return("***")
+#   } else if (p_value < 0.009) {
+#     return("**")
+#   } else if (p_value < 0.05) {
+#     return("*")
+#   } else {
+#     return("ns")
+#   }
+# }
+# 
+# # Add asterisks to the comparison_df
+# comparison_df$`significance level` <- sapply(comparison_df$p_value, add_asterisks)
+# 
+# # Display the updated comparison_df
+# print(comparison_df)
+# 
+# kable(comparison_df, caption = "Comparison Results", align = "c")
+```
+
+
+```{r}
+
+day30_df <- percent_area %>%
+  filter(day == "30")
+
+day90_df <- percent_area %>%
+  filter(day == "90")
+
+# DAY 30 ANOVA
+day30_anova_result <- aov(average_percent_burden ~ name, data = day30_df)
+
+# Extract p-values from ANOVA
+day30_p_values <- summary(day30_anova_result)[["Pr(>F)"]]
+
+# Perform Tukey's post hoc test for group comparisons
+day30_tukey_result <- TukeyHSD(day30_anova_result)
+
+# Extract p-values from Tukey's test
+day30_p_values <- day30_tukey_result[[1]][, "p adj"]
+
+day30_p_values
+# Specify the pairs of groups for significance bars
+day30_significant_comparisons <- day30_p_values < 0.05  # Example: using a significance level of 0.05
+day30_significant_comparisons
+
+# DAY 90 ANOVA
+day90_anova_result <- aov(average_percent_burden ~ name, data = day90_df)
+
+# Extract p-values from ANOVA
+day90_p_values <- summary(day90_anova_result)[["Pr(>F)"]]
+
+# Perform Tukey's post hoc test for group comparisons
+day90_tukey_result <- TukeyHSD(day90_anova_result)
+
+# Extract p-values from Tukey's test
+day90_p_values <- day90_tukey_result[[1]][, "p adj"]
+
+# Specify the pairs of groups for significance bars
+day90_significant_comparisons <- day90_p_values < 0.05  # Example: using a significance level of 0.05
+day90_significant_comparisons
+
+
+```
+
+
+```{r}
+day30_combined_df <- as.data.frame(day30_p_values) %>%
+  rownames_to_column("group") %>%
+  left_join(as.data.frame(day30_significant_comparisons) %>%
+              rownames_to_column("group"), by = "group")
+day30_combined_df
+
+day90_combined_df <- as.data.frame(day90_p_values) %>%
+  rownames_to_column("group") %>%
+  left_join(as.data.frame(day90_significant_comparisons) %>%
+              rownames_to_column("group"), by = "group")
+day90_combined_df
+
+joined_significnce <- left_join(day30_combined_df, day90_combined_df, by = "group")
+
+
+joined_significnce
+```
+
+```{r}
+
+BCG1x30result <- with(day30_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG1x"]))
+
+BCG1x30resultp_value <- BCG1x30result$p.value
+BCG1x30resultp_value 
+
+with(day30_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG2x"]))
+with(day30_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG+SvX-IN-Inulin"]))
+with(day30_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG+SvX-IM-CpG"]))
+
+with(day90_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG1x"]))
+with(day90_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG2x"]))
+with(day90_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG+SvX-IN-Inulin"]))
+with(day90_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG+SvX-IM-CpG"]))
+
+
+
+```
+
 
 ```{r}
 ggplot(data = percent_area, aes(x = day, y = average_percent_burden, fill = name, color = name)) +
@@ -91,8 +231,7 @@ ggplot(data = percent_area, aes(x = day, y = average_percent_burden, fill = name
     legend.title = element_text(color = "black", size = 1.3 * rel(1)),
     legend.text = element_text(color = "black", size = .9 * rel(1)),
     plot.title = element_text(color = "black", size = 15)) +
-scale_y_continuous(labels = scales::percent_format(scale = 1), name = "Percent Lesion Burden")
-
-
+scale_y_continuous(labels = scales::percent_format(scale = 1), name = "Percent Lesion Burden", 
+                     limits = c(0, 50))
 ```
 
