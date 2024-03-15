@@ -1,5 +1,5 @@
 ---
-title: "SvX Day30 Lesion Area"
+title: "SvX Boost 1x D30 and D90 Lesion Area"
 author: "Pablo Maldonado"
 date: "11/2/2023"
 output: html_document
@@ -31,7 +31,7 @@ library(ggmosaic)
 ```{r}
 
 # Define the file path
-file_path <- "/Volumes/rstor-henao_lab/SolaVAX-TB/SVX Histology/SolaVAX-TB_Lesion-area-cell-counts.xlsx"
+file_path <- "/Volumes/rstor-henao_lab/SolaVAX-TB/GitHub/SolaVAX-TB/Lesion_analysis/SolaVAX-TB_Lesion-area-cell-counts.xlsx"
 
 # Read the Excel file into a data frame
 lesion_area <- read_excel(file_path)
@@ -58,28 +58,32 @@ percent_area <- lesion_area_expanded %>%
   group_by(name, mouse, day) %>%
   summarise(average_percent_burden = mean(percent_area), .groups = "drop")
 
-percent_area
-```
-```{r}
+percent_area  <- percent_area %>%
+  filter(!(name == "Saline" & mouse == 2 & day == 30)) %>%
+  filter(!(name == "INInulin" & mouse == 1 & day == 90))
+percent_area 
+
 # # Recode the condition and group names
 percent_area  <- percent_area  %>%
   mutate(name = ifelse(name == "IMCPG", "BCG+SvX-IM-CPG",
                        ifelse(name == "INInulin", "BCG+SvX-IN-Inulin", name)))
 percent_area$name <- factor(percent_area$name, levels = c("Saline", "BCG1x", "BCG2x", "BCG+SvX-IM-CPG", "BCG+SvX-IN-Inulin"))
+```
 
-
-ggplot(data = percent_area, aes(x = name, y = average_percent_burden, fill = name, color = name)) +
+```{r}
+ggplot(data = percent_area, aes(x = day, y = average_percent_burden, fill = name, color = name)) +
   geom_boxplot(width = 0.5, alpha = 0.7, position = position_dodge(width = 0.75)) +
   geom_point(size = 3, shape = 21, alpha = 0.9, na.rm = TRUE, color = "black",
              position = position_dodge(width = 0.75)) +
-  scale_color_viridis_d(name = "Vaccine", alpha = 1) +  
-  scale_fill_viridis_d(name = "Vaccine", alpha = 1) +  
-  facet_wrap(~ day, scales = "free_y") +
-  labs(title = " ", x = " ", y = " ", color = "Vaccine") +
+  scale_color_viridis_d(name = " ", alpha = 1) +  
+  scale_fill_viridis_d(name = " ", alpha = 1) +  
+  #facet_wrap(~ day, scales = "free_y") +
+  labs(title = " ", x = " ", y = "Percent Lesion Burden", color = "Vaccine") +
   theme_bw() + 
   theme(
     strip.text = element_text(color = "black", size = 1.3 * rel(1)),
-    axis.text.x = element_blank(),
+    #axis.text.x = element_blank(),
+    axis.text.x = element_text(color = "black", size = 1.3 * rel(1)),
     axis.title.x = element_text(color = "black", size = 1.3 * rel(1)),
     axis.text.y = element_text(color = "black", size = 1.3 * rel(1)),
     axis.title.y = element_text(color = "black", size = 1.4 * rel(1)),
@@ -87,7 +91,8 @@ ggplot(data = percent_area, aes(x = name, y = average_percent_burden, fill = nam
     legend.title = element_text(color = "black", size = 1.3 * rel(1)),
     legend.text = element_text(color = "black", size = .9 * rel(1)),
     plot.title = element_text(color = "black", size = 15)) +
-    scale_y_continuous(limits = function(x) c(min(x), max(x) + 15))
+scale_y_continuous(labels = scales::percent_format(scale = 1), name = "Percent Lesion Burden")
+
 
 ```
 
