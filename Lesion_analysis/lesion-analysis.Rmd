@@ -1,0 +1,116 @@
+---
+title: "Untitled"
+author: "Pablo Maldonado"
+date: "7/17/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r}
+data <- read_excel("/Volumes/cvmbs/RSTOR-HenaO_lab/Pablo/SvX lesion scoring.xlsx", sheet = "Day 90")
+```
+
+```{r}
+# Remove empty rows from the data
+df <- data[!is.na(data$...1), ]
+
+# Rename the first column to "Group"
+colnames(df)[1] <- "Group"
+df$Group <- trimws(df$Group)
+
+# Remove "Average" column
+df <- df %>%
+  dplyr::select(-Average)
+
+
+group_names <- df %>%
+  filter(Group %in% c("SALINE", "BCG", "SvX IM + CPG", "SvX IN + INULIN", "INULIN", "CpG", "SvX IM", "SvX IN", "BCG BCG")) %>%
+  dplyr::select(Group) %>%
+  uncount(5)
+
+tests <- df %>%
+  filter(Group %in% c("Lesion burden", "Peribronchitis", "perivasculitis", "Granuloma comp.", "Destructive")) 
+colnames(tests)[1] <- "Test"
+
+df_bind <- cbind(group_names, tests)
+
+df_bind
+
+df_long <- df_bind %>%
+  pivot_longer(cols = starts_with("Section"), names_to = "Section", values_to = "Value") %>%
+  mutate(Section = sub("Section ", "", Section))
+df_wide <- df_long %>%
+  pivot_wider(names_from = Test, values_from = Value) %>%
+  unnest(cols = -Section)
+
+colnames(df_wide)[2] <- "Mouse"
+df_wide
+
+df_summary <- df_wide %>%
+  mutate(`Row Sum` = rowSums(.[3:7], na.rm = TRUE))
+
+df_summary 
+```
+
+```{r fig.width=5}
+df_summary$Group <- factor(df_summary$Group, levels = c("SALINE", "BCG", "BCG BCG", "INULIN", "CpG", "SvX IN", "SvX IM", "SvX IM + CPG", "SvX IN + INULIN"))
+
+df_summary %>%
+  group_by(Group) %>%
+  ggplot(aes(x = Group, y = `Row Sum`, fill = Group)) +
+  geom_boxplot(width = .5, alpha = 0.5) +
+  geom_point(show.legend = FALSE) +
+  geom_errorbar(aes(ymin = mean(`Row Sum`) - sd(`Row Sum`), ymax = mean(`Row Sum`) + sd(`Row Sum`)), width = 0.2) +
+  stat_summary(fun = mean, geom = "point", shape = 18, size = 3, color = "black") +
+  theme_bw() +
+  labs(x = "Vaccine", y = "Composite Score") +
+  ggtitle("Lesion Score Analysis SvX Day 90 (By Mouse)") +
+  guides(fill = FALSE)
+```
+```{r fig.width=5}
+
+# Dot Averages
+df_summary %>%
+  group_by(Group) %>%
+  ggplot(aes(x = Group, y = `Row Sum`, fill = Group)) +
+  stat_summary(fun = mean, geom = "point", shape = 18, size = 3, color = "black") +
+  theme_bw() +
+  labs(x = "Vaccine", y = "Composite Score") +
+  ggtitle("Lesion Score Analysis SvX Day 90 (Averages)") +
+  guides(fill = FALSE) 
+
+# Bar Chart
+df_summary %>%
+  group_by(Group) %>%
+  ggplot(aes(x = Group, y = `Row Sum`, fill = Group)) +
+  geom_bar(stat = "summary", fun = "mean", color = "black", width = 0.5) +
+  coord_cartesian(ylim = c(0, max(df_summary$`Row Sum`))) +
+  theme_bw() +
+  labs(x = "Vaccine", y = "Composite Score") +
+  ggtitle("Lesion Score Analysis SvX Day 90 (Averages)") +
+  guides(fill = FALSE)
+
+# Violin Plot
+df_summary %>%
+  group_by(Group) %>%
+  ggplot(aes(x = Group, y = `Row Sum`, fill = Group)) +
+  geom_violin(trim = FALSE) +
+  coord_cartesian(ylim = c(0, 20)) +
+  theme_bw() +
+  labs(x = "Vaccine", y = "Composite Score") +
+  ggtitle("Lesion Score Analysis SvX Day 90 (Averages)") +
+  guides(fill = FALSE)
+
+
+```
+
+
