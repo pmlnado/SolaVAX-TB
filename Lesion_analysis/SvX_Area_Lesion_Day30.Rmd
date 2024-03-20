@@ -66,9 +66,12 @@ percent_area
 
 # # Recode the condition and group names
 percent_area  <- percent_area  %>%
-  mutate(name = ifelse(name == "IMCPG", "BCG+SvX-IM-CpG",
-                       ifelse(name == "INInulin", "BCG+SvX-IN-Inulin", name)))
-percent_area$name <- factor(percent_area$name, levels = c("Saline", "BCG1x", "BCG2x", "BCG+SvX-IN-Inulin", "BCG+SvX-IM-CpG"))
+  mutate(name = ifelse(name == "IMCPG", "BCG + SolaVAX-IM-CPG",
+                       ifelse(name == "BCG1x", "BCG 1x",
+                              ifelse(name == "BCG2x", "BCG 2x",
+                       ifelse(name == "INInulin", "BCG + SolaVAX-IN-Inulin", name)))))
+                       
+percent_area$name <- factor(percent_area$name, levels = c("Saline", "BCG 1x", "BCG 2x", "BCG + SolaVAX-IM-CPG", "BCG + SolaVAX-IN-Inulin"))
 ```
 
 this works for one timepoint or sex at a time 
@@ -191,19 +194,19 @@ joined_significnce
 
 ```{r}
 
-BCG1x30result <- with(day30_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG1x"]))
+BCG1x30result <- with(day30_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG 1x"]))
 
 BCG1x30resultp_value <- BCG1x30result$p.value
 BCG1x30resultp_value 
 
-with(day30_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG2x"]))
-with(day30_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG+SvX-IN-Inulin"]))
-with(day30_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG+SvX-IM-CpG"]))
+with(day30_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG 2x"]))
+with(day30_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG + SolaVAX-IN-Inulin"]))
+with(day30_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG + SolaVAX-IM-CPG"]))
 
-with(day90_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG1x"]))
-with(day90_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG2x"]))
-with(day90_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG+SvX-IN-Inulin"]))
-with(day90_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG+SvX-IM-CpG"]))
+with(day90_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG 1x"]))
+with(day90_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG 2x"]))
+with(day90_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG + SolaVAX-IN-Inulin"]))
+with(day90_df, t.test(average_percent_burden[name == "Saline"], average_percent_burden[name == "BCG + SolaVAX-IM-CPG"]))
 
 
 
@@ -211,15 +214,14 @@ with(day90_df, t.test(average_percent_burden[name == "Saline"], average_percent_
 
 
 ```{r}
-ggplot(data = percent_area, aes(x = day, y = average_percent_burden, fill = name, color = name)) +
+ggplot(percent_area, aes(x = day, y = average_percent_burden, fill = name)) +#, color = group)) +
   geom_boxplot(width = 0.5, alpha = 0.7, position = position_dodge(width = 0.75)) +
   geom_point(size = 3, shape = 21, alpha = 0.9, na.rm = TRUE, color = "black",
              position = position_dodge(width = 0.75)) +
   scale_color_viridis_d(name = " ", alpha = 1) +  
-  scale_fill_viridis_d(name = " ", alpha = 1) +  
-  #facet_wrap(~ day, scales = "free_y") +
-  labs(title = " ", x = " ", y = "Percent Lesion Burden", color = "Vaccine") +
-  theme_bw() + 
+  scale_fill_viridis_d(name = " ", alpha = 1) + 
+  labs(title = "", x = "DPI", y = "Percent Lesion Burden", color = "Vaccine") +
+  theme_minimal() + 
   theme(
     strip.text = element_text(color = "black", size = 1.3 * rel(1)),
     #axis.text.x = element_blank(),
@@ -233,5 +235,7 @@ ggplot(data = percent_area, aes(x = day, y = average_percent_burden, fill = name
     plot.title = element_text(color = "black", size = 15)) +
 scale_y_continuous(labels = scales::percent_format(scale = 1), name = "Percent Lesion Burden", 
                      limits = c(0, 50))
+
+
 ```
 
