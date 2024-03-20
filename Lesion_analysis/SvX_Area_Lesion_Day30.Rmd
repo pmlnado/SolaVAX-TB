@@ -213,9 +213,9 @@ with(day90_df, t.test(average_percent_burden[name == "Saline"], average_percent_
 ```
 
 
-```{r}
+```{r fig.height=, fig.width=6}
 ggplot(percent_area, aes(x = day, y = average_percent_burden, fill = name)) +#, color = group)) +
-  geom_boxplot(width = 0.5, alpha = 0.7, position = position_dodge(width = 0.75)) +
+  geom_boxplot(width = 0.5, alpha = 0.5, position = position_dodge(width = 0.75)) +
   geom_point(size = 3, shape = 21, alpha = 0.9, na.rm = TRUE, color = "black",
              position = position_dodge(width = 0.75)) +
   scale_color_viridis_d(name = " ", alpha = 1) +  
@@ -237,5 +237,28 @@ scale_y_continuous(labels = scales::percent_format(scale = 1), name = "Percent L
                      limits = c(0, 50))
 
 
+
+
+ggplot(percent_area, aes(x = day, y = average_percent_burden, fill = name)) +#, color = group)) +
+geom_point(size = 5, shape = 21, alpha = 0.8, na.rm = T, colour = "black", 
+           cex = 1.5, position = position_dodge(width = .75)) + 
+  scale_color_viridis_d(name = " ", alpha = 1) +  
+  scale_fill_viridis_d(name = " ", alpha = 1) + 
+  geom_boxplot(aes(fill = name), alpha = 0.3) + 
+  labs(title = "", x = "DPI", y = "Percent Lesion Burden", color = "Vaccine") +
+  theme_minimal() + 
+  theme(
+        axis.text.x = element_blank(),
+        #axis.text.x = element_text(angle = 90, hjust = 1, size = 16), 
+        axis.text.y = element_text(size = 16),
+        axis.title.y = element_text(size = 16, face = "bold"),
+        legend.text = element_text(size = 12), 
+        legend.title = element_text(size = 16), 
+        legend.position = ("bottom"),
+        legend.key.size = unit(1, 'cm'), 
+        plot.title = element_text(color="black", size=20, face="bold")) + 
+  theme(strip.text = element_text(size=24, face = "bold")) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1), name = "Percent Lesion Burden", 
+                     limits = c(0, 50))
 ```
 
