@@ -148,7 +148,7 @@ Df1 %>%
 ```
 
 # CD4+
-```{r, fig.width = 8, fig.height= 12}
+```{r, fig.width = 4, fig.height= 4}
 
 cd4 <- pivot_longer(data = Df1, cols = "CD3+ ":"CD3+ CD4+  CD44-  CD62L- ", names_to = "cell_types", values_to = "cell_type_count")
 
@@ -163,7 +163,8 @@ cd4 <- cd4 %>%
   mutate(group = fct_relevel(group, "Saline", "BCG 1x", "BCG 2x", "BCG + SolaVAX-IN-Inulin", "BCG + SolaVAX-IM-CpG1018"),
          cell_types = factor(cell_types, levels = levels(reorder(cell_types, -proportion_of_live))))
 
-
+cd4 <- cd4 %>%
+  filter(cell_types == "CD3+ CD4+  CD44-  CD62L+ ")
  
 ggplot(cd4, aes(x = group, y = proportion_of_live, fill = group)) +#, color = group)) +
 geom_point(size = 5, shape = 21, alpha = 0.8, na.rm = T, colour = "black",
@@ -230,7 +231,7 @@ geom_point(size = 5, shape = 21, alpha = 0.8, na.rm = T, colour = "black",
   theme(strip.text = element_text(size=16, face = "bold"))
 ```
 # NK cells
-```{r, fig.width = 8, fig.height= 5}
+```{r, fig.width = 4, fig.height= 4}
 
 NK <- pivot_longer(data = Df1, cols = "CD3- NK1.1+ ":"CD3- NK1.1+  CD44-  CD62L- ", names_to = "cell_types", values_to = "cell_type_count")
 
@@ -245,6 +246,9 @@ NK <- NK %>%
   mutate(group = fct_relevel(group, "Saline", "BCG 1x", "BCG 2x", "BCG + SolaVAX-IN-Inulin", "BCG + SolaVAX-IM-CpG1018"),
          cell_types = factor(cell_types, levels = levels(reorder(cell_types, -proportion_of_live))))
 
+
+NK <- NK %>%
+  filter(cell_types == "CD3- NK1.1+  CD44-  CD62L+ ")
 
 ggplot(NK, aes(x = group, y = proportion_of_live, fill = group)) +#, color = group)) +
 geom_point(size = 5, shape = 21, alpha = 0.8, na.rm = T, colour = "black",
@@ -270,7 +274,7 @@ geom_point(size = 5, shape = 21, alpha = 0.8, na.rm = T, colour = "black",
   theme(strip.text = element_text(size=16, face = "bold"))  
 ```
 # B cells
-```{r, fig.width = 8, fig.height= 18}
+```{r, fig.width = 4, fig.height= 4}
 
 Bcells <- pivot_longer(data = Df1, cols = "CD3-  CD19-  B220+ ":"CD3-  CD19-  B220- ", names_to = "cell_types", values_to = "cell_type_count")
 
@@ -285,6 +289,9 @@ Bcells <- Bcells %>%
   mutate(group = fct_relevel(group, "Saline", "BCG 1x", "BCG 2x", "BCG + SolaVAX-IN-Inulin", "BCG + SolaVAX-IM-CpG1018"),
          cell_types = factor(cell_types, levels = levels(reorder(cell_types, -proportion_of_live))))
 
+
+Bcells <- Bcells %>%
+  filter(cell_types == "CD3-  CD19-  B220+  MHCII+  CD62L- ")
 
 ggplot(Bcells, aes(x = group, y = proportion_of_live, fill = group)) +#, color = group)) +
 geom_point(size = 5, shape = 21, alpha = 0.8, na.rm = T, colour = "black",
