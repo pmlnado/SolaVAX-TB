@@ -54,7 +54,7 @@ library(emmeans)
 MULTI CSV SHEETS MALE FEMALE
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
 # Read in all CSV files
-files <- list.files(path = "/Volumes/cvmbs/RSTOR-HenaO_lab/SolaVAX-TB/SvX_R_analysis/NO_AF_D30_All_Groups", pattern = "*.csv", full.names = TRUE)
+files <- list.files(path = "/Volumes/rstor-henao_lab/SolaVAX-TB/GitHub/SolaVAX-TB/NO_AF_D30_All_Groups", pattern = "*.csv", full.names = TRUE)
 
 dfs <- lapply(files, function(file) {
   # Read the CSV file and clean up column names
@@ -154,13 +154,13 @@ tidy_Df1 %>%
 ## Insert trials and successes (cell counts and parent populations)
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
 # Filter CD19- B220- CD3+ CD8- CD4+, CD19- B220- CD3+ CD8- CD4+ CD44+ CD62L- to find trials and successes
-tidy_Df1$cell_types [3]
+tidy_Df1$cell_types [2]
 t_cell_activation <- tidy_Df1 %>%
-  dplyr::filter(cell_types == "live leukocytes" | cell_types == "CD3- NK1.1+") 
+  dplyr::filter(cell_types == "live leukocytes" | cell_types == "CD3+ CD4+") 
 
 t_cell_activation <- t_cell_activation %>%
   pivot_wider(names_from = cell_types, values_from = `cell type count`) %>%
-  rename(trials = "live leukocytes", successes = "CD3- NK1.1+") %>%
+  rename(trials = "live leukocytes", successes = "CD3+ CD4+") %>%
   mutate(failures = trials - successes) 
 
 #%>%

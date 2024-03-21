@@ -43,13 +43,14 @@ library(ggeffects)
 library(GGally)
 library(gridExtra)
 library(emmeans)
+library(viridis)
 #mm7qNhXs8FN4CFS
 ```
 
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
 # Read in all CSV files
-files <- list.files(path = "/Volumes/cvmbs/RSTOR-HenaO_lab/SolaVAX-TB/SvX_R_analysis/BAL", pattern = "*.csv", full.names = TRUE)
+files <- list.files(path = "/Volumes/rstor-henao_lab/SolaVAX-TB/GitHub/SolaVAX-TB/BAL", pattern = "*.csv", full.names = TRUE)
 
 dfs <- lapply(files, function(file) {
   # Read the CSV file and clean up column names
@@ -123,9 +124,19 @@ Df1 <- Df1 %>%
   ))
 
 
-
 Df1 <- Df1 %>%
   filter(group %in% c("Saline", "BCG", "BCG BCG", "BCG-SvX IN + Inulin", "BCG-SvX IM + CpG"))
+
+
+
+Df1 <- Df1 %>%
+  mutate(group = case_when(
+    group == "BCG BCG" ~ "BCG 2x",
+    group == "BCG" ~ "BCG 1x",
+    group == "BCG-SvX IM + CpG" ~ "BCG + SolaVAX-IM-CpG1018",
+    group == "BCG-SvX IN + Inulin" ~ "BCG + SolaVAX-IN-Inulin",
+    TRUE ~ group  # Keep other values as they are
+  ))
 
 
 # call all group names
@@ -176,7 +187,7 @@ facet_wrap(~ cell_types, scale = "free_y", ncol = 3, nrow = 15) +
 ```
 
 # cd11b+ cd11c+
-```{r, fig.width = 6, fig.height= 5}
+```{r, fig.width =5, fig.height=5}
 
 cd11b_cd11c <- pivot_longer(data = Df1, cols = " CD11C+  CD45+ ":" CD11C-  CD45- ", names_to = "cell_types", values_to = "cell_type_count")
 
@@ -188,10 +199,11 @@ cd11b_cd11c <- pivot_longer(data = Df1, cols = " CD11C+  CD45+ ":" CD11C-  CD45-
 
 
  cd11b_cd11c <- cd11b_cd11c %>%
-  mutate(group = fct_relevel(group, "Saline", "BCG", "BCG BCG", "BCG-SvX IN + Inulin", "BCG-SvX IM + CpG"),
+  mutate(group = fct_relevel(group, "Saline", "BCG 1x", "BCG 2x", "BCG + SolaVAX-IN-Inulin", "BCG + SolaVAX-IM-CpG1018"),
          cell_types = factor(cell_types, levels = levels(reorder(cell_types, -proportion_of_live))))
 
 
+ 
 cd11b_cd11c %>%
   ggplot(aes(x = day, y = proportion_of_live, fill = group, color = group)) +
 facet_wrap(~ cell_types, scale = "free_y", ncol = 3, nrow = 15) +
@@ -213,8 +225,32 @@ facet_wrap(~ cell_types, scale = "free_y", ncol = 3, nrow = 15) +
         legend.title = element_text(size = 12))  
 
 
-
-
-
-
 ```
+
+
+#viridis
+```{r, fig.width =8, fig.height=8}
+ggplot(cd11b_cd11c, aes(x = day, y = proportion_of_live, fill = group)) +#, color = group)) +
+geom_point(size = 5, shape = 21, alpha = 0.8, na.rm = T, colour = "black",
+           cex = 1.5, position = position_dodge(width = .75)) +
+  scale_color_viridis_d(name = " ", alpha = 1) +
+  scale_fill_viridis_d(name = " ", alpha = 1) +
+  facet_wrap(~ cell_types, scale = "free_y", ncol = 3, nrow = 15) +
+  geom_boxplot(aes(fill = group), alpha = 0.3) +
+   labs(title = "cd11b+ cd11c+ in BAL Day 30", 
+       x = "Day", y = "Proportion of Live Leukocytes", 
+       color = "Vaccine") +
+  theme_bw() + 
+  theme(
+        #axis.text.x = element_blank(),
+        axis.text.x = element_text(size = 16, color = "black"),
+        axis.text.y = element_text(size = 16, color = "black"),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 12),
+        legend.position = ("bottom"),
+        legend.key.size = unit(1, 'cm'),
+        plot.title = element_text(color="black", size=12, face="bold")) +
+  theme(strip.text = element_text(size=16, face = "bold"))
+```
+
