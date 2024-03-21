@@ -49,7 +49,7 @@ library(emmeans)
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
 # Read in all CSV files
-files <- list.files(path = "/Volumes/cvmbs/RSTOR-HenaO_lab/SolaVAX-TB/SvX_R_analysis/NO_AF_D90_All_Groups", pattern = "*.csv", full.names = TRUE)
+files <- list.files(path = "/Volumes/rstor-henao_lab/SolaVAX-TB/SvX_R_analysis/NO_AF_D90_All_Groups", pattern = "*.csv", full.names = TRUE)
 
 dfs <- lapply(files, function(file) {
   # Read the CSV file and clean up column names
@@ -123,10 +123,19 @@ Df1 <- Df1 %>%
   ))
 
 
+Df1 <- Df1 %>%
+  filter(group %in% c("Saline", "BCG", "BCG BCG", "BCG-SvX IN + Inulin", "BCG-SvX IM + CpG"))
+
 
 
 Df1 <- Df1 %>%
-  filter(group %in% c("Saline", "BCG", "BCG BCG", "BCG-SvX IN + Inulin", "BCG-SvX IM + CpG"))
+  mutate(group = case_when(
+    group == "BCG BCG" ~ "BCG 2x",
+    group == "BCG" ~ "BCG 1x",
+    group == "BCG-SvX IM + CpG" ~ "BCG + SolaVAX-IM-CpG1018",
+    group == "BCG-SvX IN + Inulin" ~ "BCG + SolaVAX-IN-Inulin",
+    TRUE ~ group  # Keep other values as they are
+  ))
 
 
 # call all group names
@@ -134,10 +143,12 @@ Df1 %>%
   dplyr::select(group) %>%
   distinct() 
 
+#colnames(Df1) 
+
 ```
 
 # CD4+
-```{r, fig.width = 7, fig.height= 10}
+```{r, fig.width = 4, fig.height= 4}
 
 cd4 <- pivot_longer(data = Df1, cols = "CD3+ ":"CD3+ CD4+  CD44-  CD62L- ", names_to = "cell_types", values_to = "cell_type_count")
 
@@ -149,29 +160,34 @@ cd4 <- cd4 %>%
 
 
 cd4 <- cd4 %>%
-  mutate(group = fct_relevel(group, "Saline", "BCG", "BCG BCG", "BCG-SvX IN + Inulin", "BCG-SvX IM + CpG"),
+  mutate(group = fct_relevel(group, "Saline", "BCG 1x", "BCG 2x", "BCG + SolaVAX-IN-Inulin", "BCG + SolaVAX-IM-CpG1018"),
          cell_types = factor(cell_types, levels = levels(reorder(cell_types, -proportion_of_live))))
 
-
- cd4 %>%
-  ggplot(aes(x = group, y = proportion_of_live, fill = group, color = group)) +
-facet_wrap(~ cell_types, scale = "free_y", ncol = 3, nrow = 15) +
-  geom_boxplot(width = 0.5, alpha = 0.5, position = position_dodge(width = 0.75)) +
-  geom_point(size = 3, shape = 21, alpha = 0.8, na.rm = TRUE, color = "black",
-             position = position_dodge(width = 0.75)) +
-  labs(title = "Lung Day 30", 
+cd4 <- cd4 %>%
+  filter(cell_types == "CD3+ CD4+  CD44+  CD62L- ")
+ 
+ggplot(cd4, aes(x = group, y = proportion_of_live, fill = group)) +#, color = group)) +
+geom_point(size = 5, shape = 21, alpha = 0.8, na.rm = T, colour = "black",
+           cex = 1.5, position = position_dodge(width = .75)) +
+  scale_color_viridis_d(name = " ", alpha = 1) +
+  scale_fill_viridis_d(name = " ", alpha = 1) +
+  facet_wrap(~ cell_types, scale = "free_y", ncol = 3, nrow = 15) +
+  geom_boxplot(aes(fill = group), alpha = 0.3) +
+   labs(title = "cd11b+ cd11c+ in BAL Day 30", 
        x = "Day", y = "Proportion of Live Leukocytes", 
        color = "Vaccine") +
-  guides(fill = "none", shape = guide_legend(title = "Vaccine")) +
   theme_bw() + 
-   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 14),  # Increase axis label size
-        strip.text = element_text(size = 12, face = "bold"),  # Increase facet label size
-        plot.title = element_text(size = 16, face = "bold"),
-        axis.title.x = element_text(size = 13),  # Increase x-axis title size
-        axis.title.y = element_text(size = 13),  # Increase y-axis title size
-        axis.text.y = element_text(size = 12),   # Increase y-axis numbers size
+  theme(
+        axis.text.x = element_blank(),
+        #axis.text.x = element_text(size = 16, color = "black"),
+        axis.text.y = element_text(size = 16, color = "black"),
+        axis.title.y = element_text(size = 12, face = "bold"),
         legend.text = element_text(size = 12),
-        legend.title = element_text(size = 12)) 
+        legend.title = element_text(size = 12),
+        legend.position = ("bottom"),
+        legend.key.size = unit(1, 'cm'),
+        plot.title = element_text(color="black", size=12, face="bold")) +
+  theme(strip.text = element_text(size=16, face = "bold"))
 ```
 
 # CD8+
@@ -185,34 +201,36 @@ cd8 <- pivot_longer(data = Df1, cols = "CD3+ CD8+ ":"CD3+ CD8+  CD44-  CD62L- ",
 cd8 <- cd8 %>%
   mutate(proportion_of_live = (cell_type_count/`live leukocytes`*100)) 
 
-
 cd8 <- cd8 %>%
-  mutate(group = fct_relevel(group, "Saline", "BCG", "BCG BCG", "BCG-SvX IN + Inulin", "BCG-SvX IM + CpG"),
+  mutate(group = fct_relevel(group, "Saline", "BCG 1x", "BCG 2x", "BCG + SolaVAX-IN-Inulin", "BCG + SolaVAX-IM-CpG1018"),
          cell_types = factor(cell_types, levels = levels(reorder(cell_types, -proportion_of_live))))
 
 
- cd8 %>%
-  ggplot(aes(x = group, y = proportion_of_live, fill = group, color = group)) +
-facet_wrap(~ cell_types, scale = "free_y", ncol = 3, nrow = 15) +
-  geom_boxplot(width = 0.5, alpha = 0.5, position = position_dodge(width = 0.75)) +
-  geom_point(size = 3, shape = 21, alpha = 0.8, na.rm = TRUE, color = "black",
-             position = position_dodge(width = 0.75)) +
-  labs(title = "Lung Day 30", 
+ggplot(cd8, aes(x = group, y = proportion_of_live, fill = group)) +#, color = group)) +
+geom_point(size = 5, shape = 21, alpha = 0.8, na.rm = T, colour = "black",
+           cex = 1.5, position = position_dodge(width = .75)) +
+  scale_color_viridis_d(name = " ", alpha = 1) +
+  scale_fill_viridis_d(name = " ", alpha = 1) +
+  facet_wrap(~ cell_types, scale = "free_y", ncol = 3, nrow = 15) +
+  geom_boxplot(aes(fill = group), alpha = 0.3) +
+   labs(title = "cd11b+ cd11c+ in BAL Day 30", 
        x = "Day", y = "Proportion of Live Leukocytes", 
        color = "Vaccine") +
-  guides(fill = "none", shape = guide_legend(title = "Vaccine")) +
   theme_bw() + 
-   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 14),  # Increase axis label size
-        strip.text = element_text(size = 12, face = "bold"),  # Increase facet label size
-        plot.title = element_text(size = 16, face = "bold"),
-        axis.title.x = element_text(size = 13),  # Increase x-axis title size
-        axis.title.y = element_text(size = 13),  # Increase y-axis title size
-        axis.text.y = element_text(size = 12),   # Increase y-axis numbers size
+  theme(
+        axis.text.x = element_blank(),
+        #axis.text.x = element_text(size = 16, color = "black"),
+        axis.text.y = element_text(size = 16, color = "black"),
+        axis.title.y = element_text(size = 12, face = "bold"),
         legend.text = element_text(size = 12),
-        legend.title = element_text(size = 12)) 
+        legend.title = element_text(size = 12),
+        legend.position = ("bottom"),
+        legend.key.size = unit(1, 'cm'),
+        plot.title = element_text(color="black", size=12, face="bold")) +
+  theme(strip.text = element_text(size=10, face = "bold"))
 ```
 # NK cells
-```{r, fig.width = 7, fig.height= 4}
+```{r, fig.width = 4, fig.height= 4}
 
 NK <- pivot_longer(data = Df1, cols = "CD3- NK1.1+ ":"CD3- NK1.1+  CD44-  CD62L- ", names_to = "cell_types", values_to = "cell_type_count")
 
@@ -224,32 +242,38 @@ NK <- NK %>%
 
 
 NK <- NK %>%
-  mutate(group = fct_relevel(group, "Saline", "BCG", "BCG BCG", "BCG-SvX IN + Inulin", "BCG-SvX IM + CpG"),
+  mutate(group = fct_relevel(group, "Saline", "BCG 1x", "BCG 2x", "BCG + SolaVAX-IN-Inulin", "BCG + SolaVAX-IM-CpG1018"),
          cell_types = factor(cell_types, levels = levels(reorder(cell_types, -proportion_of_live))))
 
 
- NK %>%
-  ggplot(aes(x = group, y = proportion_of_live, fill = group, color = group)) +
-facet_wrap(~ cell_types, scale = "free_y", ncol = 3, nrow = 15) +
-  geom_boxplot(width = 0.5, alpha = 0.5, position = position_dodge(width = 0.75)) +
-  geom_point(size = 3, shape = 21, alpha = 0.8, na.rm = TRUE, color = "black",
-             position = position_dodge(width = 0.75)) +
-  labs(title = "Lung Day 30", 
+NK <- NK %>%
+  filter(cell_types == "CD3- NK1.1+  CD44+  CD62L+ ")
+
+ggplot(NK, aes(x = group, y = proportion_of_live, fill = group)) +#, color = group)) +
+geom_point(size = 5, shape = 21, alpha = 0.8, na.rm = T, colour = "black",
+           cex = 1.5, position = position_dodge(width = .75)) +
+  scale_color_viridis_d(name = " ", alpha = 1) +
+  scale_fill_viridis_d(name = " ", alpha = 1) +
+  facet_wrap(~ cell_types, scale = "free_y", ncol = 3, nrow = 15) +
+  geom_boxplot(aes(fill = group), alpha = 0.3) +
+   labs(title = "cd11b+ cd11c+ in BAL Day 30", 
        x = "Day", y = "Proportion of Live Leukocytes", 
        color = "Vaccine") +
-  guides(fill = "none", shape = guide_legend(title = "Vaccine")) +
   theme_bw() + 
-   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 14),  # Increase axis label size
-        strip.text = element_text(size = 12, face = "bold"),  # Increase facet label size
-        plot.title = element_text(size = 16, face = "bold"),
-        axis.title.x = element_text(size = 13),  # Increase x-axis title size
-        axis.title.y = element_text(size = 13),  # Increase y-axis title size
-        axis.text.y = element_text(size = 12),   # Increase y-axis numbers size
+  theme(
+        axis.text.x = element_blank(),
+        #axis.text.x = element_text(size = 16, color = "black"),
+        axis.text.y = element_text(size = 16, color = "black"),
+        axis.title.y = element_text(size = 12, face = "bold"),
         legend.text = element_text(size = 12),
-        legend.title = element_text(size = 12))  
+        legend.title = element_text(size = 12),
+        legend.position = ("bottom"),
+        legend.key.size = unit(1, 'cm'),
+        plot.title = element_text(color="black", size=12, face="bold")) +
+  theme(strip.text = element_text(size=16, face = "bold"))  
 ```
 # B cells
-```{r, fig.width = 7, fig.height= 16}
+```{r, fig.width = 4, fig.height= 4}
 
 Bcells <- pivot_longer(data = Df1, cols = "CD3-  CD19-  B220+ ":"CD3-  CD19-  B220- ", names_to = "cell_types", values_to = "cell_type_count")
 
@@ -261,27 +285,33 @@ Bcells <- Bcells %>%
 
 
 Bcells <- Bcells %>%
-  mutate(group = fct_relevel(group, "Saline", "BCG", "BCG BCG", "BCG-SvX IN + Inulin", "BCG-SvX IM + CpG"),
+  mutate(group = fct_relevel(group, "Saline", "BCG 1x", "BCG 2x", "BCG + SolaVAX-IN-Inulin", "BCG + SolaVAX-IM-CpG1018"),
          cell_types = factor(cell_types, levels = levels(reorder(cell_types, -proportion_of_live))))
 
 
-Bcells %>%
-  ggplot(aes(x = group, y = proportion_of_live, fill = group, color = group)) +
-facet_wrap(~ cell_types, scale = "free_y", ncol = 3, nrow = 15) +
-  geom_boxplot(width = 0.5, alpha = 0.5, position = position_dodge(width = 0.75)) +
-  geom_point(size = 3, shape = 21, alpha = 0.8, na.rm = TRUE, color = "black",
-             position = position_dodge(width = 0.75)) +
-  labs(title = "Lung Day 30", 
+Bcells <- Bcells %>%
+  filter(cell_types == "CD3-  CD19+  B220+ ")
+
+ggplot(Bcells, aes(x = group, y = proportion_of_live, fill = group)) +#, color = group)) +
+geom_point(size = 5, shape = 21, alpha = 0.8, na.rm = T, colour = "black",
+           cex = 1.5, position = position_dodge(width = .75)) +
+  scale_color_viridis_d(name = " ", alpha = 1) +
+  scale_fill_viridis_d(name = " ", alpha = 1) +
+  facet_wrap(~ cell_types, scale = "free_y", ncol = 3, nrow = 15) +
+  geom_boxplot(aes(fill = group), alpha = 0.3) +
+   labs(title = "cd11b+ cd11c+ in BAL Day 30", 
        x = "Day", y = "Proportion of Live Leukocytes", 
        color = "Vaccine") +
-  guides(fill = "none", shape = guide_legend(title = "Vaccine")) +
   theme_bw() + 
-   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 14),  # Increase axis label size
-        strip.text = element_text(size = 12, face = "bold"),  # Increase facet label size
-        plot.title = element_text(size = 16, face = "bold"),
-        axis.title.x = element_text(size = 13),  # Increase x-axis title size
-        axis.title.y = element_text(size = 13),  # Increase y-axis title size
-        axis.text.y = element_text(size = 12),   # Increase y-axis numbers size
+  theme(
+        axis.text.x = element_blank(),
+        #axis.text.x = element_text(size = 16, color = "black"),
+        axis.text.y = element_text(size = 16, color = "black"),
+        axis.title.y = element_text(size = 12, face = "bold"),
         legend.text = element_text(size = 12),
-        legend.title = element_text(size = 12)) 
+        legend.title = element_text(size = 12),
+        legend.position = ("bottom"),
+        legend.key.size = unit(1, 'cm'),
+        plot.title = element_text(color="black", size=12, face="bold")) +
+  theme(strip.text = element_text(size=16, face = "bold"))
 ```
