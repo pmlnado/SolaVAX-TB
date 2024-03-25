@@ -148,8 +148,47 @@ Df1 %>%
 #colnames(Df1) 
 ```
 
+NKT
 ```{r}
 
+NKT <- pivot_longer(data = Df1, cols = "CD3+ ":"CD3+ CD4-CD8- NK1.1+ ", names_to = "cell_types", values_to = "cell_type_count")
+
+
+ NKT <- NKT %>%
+  dplyr::select("group", "mouse_ID", "cell_types", "live leukocytes", "cell_type_count")
+ 
+NKT <- NKT %>%
+  mutate(proportion_of_live = (cell_type_count/`live leukocytes`*100))
+
+NKT <- NKT %>%
+  mutate(group = fct_relevel(group, "Saline", "BCG 1x", "BCG 2x", "BCG + SolaVAX-IN-Inulin", "BCG + SolaVAX-IM-CpG1018"),
+         cell_types = factor(cell_types, levels = levels(reorder(cell_types, -proportion_of_live))))
+
+NKT <- NKT %>%
+  filter(cell_types == "CD3+ CD4-CD8- NK1.1+ ")
+ 
+ggplot(NKT, aes(x = group, y = proportion_of_live, fill = group)) +#, color = group)) +
+geom_point(size = 5, shape = 21, alpha = 0.8, na.rm = T, colour = "black",
+           cex = 1.5, position = position_dodge(width = .75)) +
+  scale_color_viridis_d(name = " ", alpha = 1) +
+  scale_fill_viridis_d(name = " ", alpha = 1) +
+  facet_wrap(~ cell_types, scale = "free_y", ncol = 3, nrow = 15) +
+  geom_boxplot(aes(fill = group), alpha = 0.3) +
+   labs(title = "cd11b+ cd11c+ in BAL Day 30", 
+       x = "Day", y = "Proportion of Live Leukocytes", 
+       color = "Vaccine") +
+  theme_bw() + 
+  theme(
+        axis.text.x = element_blank(),
+        #axis.text.x = element_text(size = 16, color = "black"),
+        axis.text.y = element_text(size = 16, color = "black"),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 12),
+        legend.position = ("bottom"),
+        legend.key.size = unit(1, 'cm'),
+        plot.title = element_text(color="black", size=12, face="bold")) +
+  theme(strip.text = element_text(size=16, face = "bold"))
 ```
 
 
